@@ -21,7 +21,7 @@ class CircuitBreakerTests: XCTestCase {
     }
     
     func testSuccess() {
-        let expectation = expectationWithDescription("Successful call")
+        let expect = expectation(description: "Successful call")
         
         circuitBreaker = CircuitBreaker()
         circuitBreaker.call = { [weak self] circuitBreaker in
@@ -29,36 +29,36 @@ class CircuitBreakerTests: XCTestCase {
                 XCTAssertNotNil(data)
                 XCTAssertNil(error)
                 circuitBreaker.success()
-                expectation.fulfill()
+                expect.fulfill()
             }
         }
         circuitBreaker.execute()
         
-        waitForExpectationsWithTimeout(10) { _ in }
+        waitForExpectations(timeout: 10) { _ in }
     }
     
     func testTimeout() {
-        let expectation = expectationWithDescription("Timed out call")
+        let expect = expectation(description: "Timed out call")
         
         circuitBreaker = CircuitBreaker(timeout: 3.0)
         circuitBreaker.call = { [weak self] circuitBreaker in
             switch circuitBreaker.failureCount {
             case 0:
-                self?.testService?.delayedCall(5) { _ in }
+                self?.testService?.delayedCall(5) { _, _ in }
             default:
                 self?.testService?.successCall { data, error in
                     circuitBreaker.success()
-                    expectation.fulfill()
+                    expect.fulfill()
                 }
             }
         }
         circuitBreaker.execute()
         
-        waitForExpectationsWithTimeout(15) { _ in }
+        waitForExpectations(timeout: 115) { _ in }
     }
     
     func testFailure() {
-        let expectation = expectationWithDescription("Failure call")
+        let expect = expectation(description: "Failure call")
         
         circuitBreaker = CircuitBreaker(timeout: 10.0, maxRetries: 1)
         circuitBreaker.call = { [weak self] circuitBreaker in
@@ -72,17 +72,17 @@ class CircuitBreakerTests: XCTestCase {
             default:
                 self?.testService?.successCall { data, error in
                     circuitBreaker.success()
-                    expectation.fulfill()
+                    expect.fulfill()
                 }
             }
         }
         circuitBreaker.execute()
         
-        waitForExpectationsWithTimeout(10) { _ in }
+        waitForExpectations(timeout: 110) { _ in }
     }
     
     func testTripping() {
-        let expectation = expectationWithDescription("Tripped call")
+        let expect = expectation(description: "Tripped call")
         
         circuitBreaker = CircuitBreaker(
             timeout: 10.0,
@@ -93,11 +93,11 @@ class CircuitBreakerTests: XCTestCase {
         )
         
         circuitBreaker.didTrip = { circuitBreaker, error in
-            XCTAssertTrue(circuitBreaker.state == .Open)
+            XCTAssertTrue(circuitBreaker.state == .open)
             XCTAssertTrue(circuitBreaker.failureCount == circuitBreaker.maxRetries + 1)
-            XCTAssertTrue((error as! NSError).code == 404)
+            XCTAssertTrue((error! as NSError).code == 404)
             circuitBreaker.reset()
-            expectation.fulfill()
+            expect.fulfill()
         }
         circuitBreaker.call = { [weak self] circuitBreaker in
             self?.testService.failureCall { data, error in
@@ -106,13 +106,13 @@ class CircuitBreakerTests: XCTestCase {
         }
         circuitBreaker.execute()
         
-        waitForExpectationsWithTimeout(100) { error in
-            print(error)
+        waitForExpectations(timeout: 1100) { error in
+            print(error!)
         }
     }
     
     func testReset() {
-        let expectation = expectationWithDescription("Reset call")
+        let expect = expectation(description: "Reset call")
         
         circuitBreaker = CircuitBreaker(
             timeout: 10.0,
@@ -122,11 +122,11 @@ class CircuitBreakerTests: XCTestCase {
             resetTimeout: 2.0
         )
         circuitBreaker.call = { [weak self] circuitBreaker in
-            if circuitBreaker.state == .HalfOpen {
+            if circuitBreaker.state == .halfOpen {
                 self?.testService?.successCall { data, error in
                     circuitBreaker.success()
-                    XCTAssertTrue(circuitBreaker.state == .Closed)
-                    expectation.fulfill()
+                    XCTAssertTrue(circuitBreaker.state == .closed)
+                    expect.fulfill()
                 }
                 return
             }
@@ -136,12 +136,12 @@ class CircuitBreakerTests: XCTestCase {
             }
         }
         circuitBreaker.execute()
-        
-        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, Int64(4.0 * Double(NSEC_PER_SEC))), dispatch_get_main_queue()) {
+
+        DispatchQueue.main.asyncAfter(deadline: DispatchTime.now()) {
             self.circuitBreaker.execute()
         }
         
-        waitForExpectationsWithTimeout(10) { _ in }
+        waitForExpectations(timeout: 110) { _ in }
     }
     
 }

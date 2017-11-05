@@ -20,7 +20,7 @@ class ViewController: UIViewController {
             resetTimeout: 2.0
         )
         circuitBreaker?.didTrip = { [weak self] circuitBreaker, error in
-            self?.logInfo("Failure (Code: \((error as! NSError).code)). Tripped! State: \(circuitBreaker.state)")
+            self?.logInfo("Failure (Code: \((error! as NSError).code)). Tripped! State: \(circuitBreaker.state)")
         }
         circuitBreaker?.call = { [weak self] circuitBreaker in
             guard let strongSelf = self else { return }
@@ -54,9 +54,9 @@ class ViewController: UIViewController {
         circuitBreaker?.execute()
     }
     
-    private func logInfo(info: String) {
+    private func logInfo(_ info: String) {
         var newInfo = infoTextView.text
-        newInfo.appendContentsOf("\(info)\n")
+        newInfo?.append(contentsOf: "\(info)\n")
         infoTextView.text = newInfo
     }
     
